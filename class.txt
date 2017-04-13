@@ -1,0 +1,2 @@
+bcg_min: old style option "-class" is replaced by "-class -"
+bcg_transition: file ``hsy_stack_hide.bcg'' is unreadable

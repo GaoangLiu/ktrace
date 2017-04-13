@@ -1,0 +1,87 @@
+# we decide a pair of states (s1, s2) is 'stuttering equivalent' if they satisfy :
+# 1. between them there exist a tau transition (s1, tau, s2)
+# 2. if there is a complete method run from s1, s1 - call -> u1 - tau -> u2 - tau -> u3 - ret -> u4,
+#    then there must be a similiar run: s2 - call -> v1 - tau -> v2 - tau -> v3 - ret -> v4, and
+#    (ui, vi) satisfy :
+#        1. ui == vi
+#        2. a tau transition exists ( ui, tau, vi )
+
+use v5.18;
+use strict;
+use autodie;
+use FileProcess qw(update_trans flush_trans);
+use YAML;
+no warnings 'experimental::smartmatch';
+
+# NOTATIONS:
+# gt  : -- global transition
+# pt  : -- part transition, i.e., tau transitions from gt;
+# inf : -- input file .. (if is keywords)
+
+open my $inf, '<', "input/part_msqueue25.aut";
+our $gt = update_trans($inf);
+our $pt;
+
+check_lp();
+
+sub check_lp {
+    map {
+        my $k = $_;
+        map { is_in_diamond( $k, $_ ) }
+          grep { $gt->{$k}{$_} =~ /i/ }
+          keys %{ $gt->{$k} }
+    } keys %$gt;
+
+    flush_trans($pt);
+    print ":-- done\n";
+}
+
+sub is_in_diamond {    # prove whether states S and T are part of a diamond
+    my ( $s, $t ) = @_;    # note : s -- tau --> t
+    die ":-- Not a transition : $s, $t"
+      unless defined $t
+      and $gt->{$s}{$t} =~ /i/;
+
+    $pt->{$s}{$t} = 0
+      unless defined $pt->{$s}{$t};
+
+    my $bool = 0;
+    foreach my $suc ( keys %{ $gt->{$s} } ) {
+        my ( $b, $taus ) = has_tau_trans($suc);
+        next if $suc == $t;
+        next unless $b == 1;
+
+        my $act = $gt->{$s}{$suc};
+
+        foreach my $v (@$taus) {
+            next unless defined $gt->{$t}{$v};
+            next unless $act ~~ $gt->{$t}{$v};
+
+            if ( 0 and $s == 11 ) {
+                say "s, t, suc, v = $s, $t, $suc, $v";
+            }
+
+            $pt->{$s}{$t}   = 1;
+            $pt->{$suc}{$v} = 1;
+            $bool           = 1;
+            last;
+        }
+
+        #map say, @$taus;
+    }
+
+    return $bool;
+}
+
+sub has_tau_trans {
+    my $s      = shift;
+    my $hastau = 0;       # whether state s has a tau trans
+    my $tauSucs;
+
+    $gt->{$s}{$_} =~ /i/
+      and $hastau = 1
+      and push @$tauSucs, $_
+      for keys %{ $gt->{$s} };
+
+    return ( $hastau, $tauSucs );
+}
