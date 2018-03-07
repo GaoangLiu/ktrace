@@ -6,8 +6,9 @@
 # -- 
 # Gaoang@i, 2015 12 08
 
-use Modern::Perl ; 
-use DDP ;  
+# use Modern::Perl ; 
+use DDP ;
+use v5.10;
 use FileProcess qw(update_trans); 
 use List::Util qw(first max) ; 
 

@@ -1,41 +1,53 @@
 #!/usr/bin/perl 
-use v5.16;
+use v5.10;
 use strict; # use warnings; 
 use SetMethods qw(:Both); 
 use PreProcess qw(:Both);
 use FileProcess qw(original_trace flush_trans); 
 use List::Util qw(max first);
 use Carp qw(croak carp);
-no warnings "experimental::smartmatch"; 
-
+no warnings 'experimental::smartmatch';
 
 END {
     if (defined $ARGV[2] and $ARGV[1] =~ /^\d+$/ and $ARGV[2] =~ /^\d+$/) {
+	#if(1) {
 	inequivalent_traces($ARGV[1], $ARGV[2]);
     } else {
 	check_traces_equivalence();
     }
 }
 
+# Reading a file from command line  
+# die "" unless defined $ARGV[0];
+my ($file, $fh, $wh, $con); 
+{
+    die ">> Please specify a quotient file\n\n" 
+	unless defined $ARGV[0]; 
 
-croak "Please specify a quotient file first!\n" # Reading a quotient file from command line  
-    unless defined $ARGV[0]; 
+    $file = $ARGV[0];
+    $fh = IO::File->new($file, "r"); # Reading quotient file 
 
-my $file = $ARGV[0];
-my $fh = IO::File->new($file, "r"); # Reading quotient file 
-system("mkdir output") unless (-d "output");
+    # Create directory 'output/' unless it already exists, 
+    # wh: log file which contains info about trace-equivelence and so on.
+    unless (-d "output") {
+	system("mkdir output");
+    }
+    
+    $file = (split("/", $ARGV[0]))[-1];
+    $wh = IO::File -> new("output/$file", 'w'); 
+    $con = " . "; 
+}
 
-$file = (split("/", $ARGV[0]))[-1];
-my $wh = IO::File -> new("output/$file", 'w'); 
-my $con = " . "; 		
-my (%sucs,		      # maps each state to a set of successors
-    %trans,		
-    %equivalent,	 # whether two states s1 and s2 are equivalent
-    %oneTracePrefixes,	 # prefixes for pure traces 
+
+my (%sucs, 
+    %trans,
+    %equivalent,  # whether two states s1 and s2 are equivalent
+    %prefixzero,  # prefix for pure traces 
     %prefix_multi,
     );
 
-process_quotient_system($fh);	# 
+do_preprocess($fh);
+my $nodesnum	= max(keys %sucs);	# number of nodes
 
 # 0-trace encode $setcode{2}{0} = @zerosets, the 0-trace set (and rank) for state 2 
 my %setcode ;				
@@ -53,7 +65,7 @@ sub check_traces_equivalence {
 	foreach my $j ( sort numerically keys %{$trans{$i}} ) {
 	    #say "processing <$i, $j>"; 
 	    next unless $trans{$i}{$j} =~ /i/ ;
-	    
+
 	    if (pure_trace_equiv($i, $j))
 	    {
 		$ca[0] ++; 
@@ -161,9 +173,7 @@ sub trace_set_encoding {  # encode the traces into number which is stored in set
 
 
 
-# To decide whether two states (c, d) have same pure traces (in which tau are omitted) set.
-# This subroutine increasingly compares whether the two states have the same set of trace
-# prefixes that with length up to 'n'. 
+# whether two states (c, d) have same pure traces set 
 sub pure_trace_equiv { 
     my ($c, $d) = (shift, shift);
     if (defined $equivalent{$c}{$d}) {
@@ -171,46 +181,47 @@ sub pure_trace_equiv {
 	return 0; 
     }
     
-    my $depth = 1; 
+    my $dep = 1; 
     while(1) {
-	my $array_c = get_trace_prefixes($c, $depth);
-	my $array_d = get_trace_prefixes($d, $depth);
+	my $array_c = prefix_trace($c, $dep);
+	my $array_d = prefix_trace($d, $dep);
 	return 0 unless keys %$array_c ~~ keys %$array_d;
 	last unless %$array_c;
-	$depth ++ ; 
+	$dep ++ ; 
     }
     
-    $equivalent{$c}{$d}  = $equivalent{$d}{$c} = 1; # been here means it was not defined before 
-    return 1 ;  
+    $equivalent{$c}{$d}  = $equivalent{$d}{$c} = 1; # been here means it's not defined 
+    return 1 ;   # since c, d equiv, 0 is useless here. 
 }
 
 
-# Return for a state a set of trace prefixes with length 'n'. 
-sub get_trace_prefixes {		
-    my ($state, $length) = (shift, shift);
-    my $prefixes = {};		# is an anonymous hash table that stores traces 
-    return $oneTracePrefixes{$state}{$length} if defined $oneTracePrefixes{$state}{$length} ; 
-    return unless ($sucs{$state} and $length > 0);
+sub prefix_trace {		# for 0-trace only 
+    my	($n, $len) = (shift, shift);
+    return $prefixzero{$n}{$len} if defined $prefixzero{$n}{$len} ; 
     
-    foreach my $suc (keys %{$trans{$state}}) {
-	my $act = $trans{$state}{$suc};
+    my	$cur_pref = {};		# prefix set for this node $n;
+    return $cur_pref unless $sucs{$n} and $len > 0;
+
+    foreach my $suc (keys %{$trans{$n}}) {
+	my $act = $trans{$n}{$suc};     # action
 	if ($act =~ /i/) {
-	    map{ $prefixes -> {$_} = 1 } keys %{get_trace_prefixes($suc, $length)};
-	} elsif ($length == 1) { 
-	    $prefixes -> {$act} = 1; 
+	    map{ $cur_pref -> {$_} = 1 } keys %{prefix_trace($suc, $len)};
+	} elsif ($len == 1) { # doesn't matterh what suc may be 
+	    $cur_pref -> {$act} = 1; 
+	    next; 
 	} else{
-	    my $suc_pref  = get_trace_prefixes($suc, $length - 1);
-	    map{ $prefixes -> {join($con, $act, $_)} = 1 } keys %$suc_pref;
+	    my $suc_pref  = prefix_trace($suc, $len - 1);
+	    map{ $cur_pref -> {join($con, $act, $_)} = 1 } keys %$suc_pref;
 	}
     }
 
-    $oneTracePrefixes{$state}{$length} = $prefixes; 
-    return $prefixes; 
+    $prefixzero{$n}{$len} = $cur_pref; 
+    return $cur_pref; 
 }
 
 
 
-sub process_quotient_system {  # read file and update %trans and %sucs 
+sub do_preprocess {  # read file and update %trans and %sucs 
     my $file = shift; 
     my ($trans_num, $tau_num) = (0, 0); 
     my $states_counter; 
@@ -244,8 +255,8 @@ sub inequivalent_traces {
     my $depth = 1;
     
   L:while ('TRUE') {		
-      my $ta = get_trace_prefixes($sa, $depth);
-      my $tb = get_trace_prefixes($sb, $depth);
+      my $ta = prefix_trace($sa, $depth);
+      my $tb = prefix_trace($sb, $depth);
       
       if ($ta ~~ $tb) {
 	  last unless %$ta; 
