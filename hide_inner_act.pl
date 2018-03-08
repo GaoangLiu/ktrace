@@ -2,7 +2,7 @@
 #   1. produce the transition, and print it out (inner action hided as tau) 
 #   2. to do 
 # Gaoang @i, Dec 05 2015 
-
+use lib '.';
 use v5.18; 
 use strict;
 use autodie;

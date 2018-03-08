@@ -6,7 +6,8 @@
 # -- 
 # Gaoang@i, 2015 12 08
 
-# use Modern::Perl ; 
+# use Modern::Perl ;
+use lib '.';
 use DDP ;
 use v5.10;
 use FileProcess qw(update_trans); 

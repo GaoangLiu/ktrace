@@ -1,4 +1,5 @@
 ## find lp
+use lib '.';
 use Modern::Perl ; no warnings ;
 use autodie;
 use JSON;

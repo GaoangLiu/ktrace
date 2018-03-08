@@ -1,4 +1,5 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
+use lib '.';
 use v5.10;
 use strict; # use warnings; 
 use SetMethods qw(:Both); 

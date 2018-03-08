@@ -1,3 +1,4 @@
+use lib '.'; 
 use 5.010; 
 use strict; 
 use List::Util qw(first);

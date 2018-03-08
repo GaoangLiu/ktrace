@@ -2,7 +2,8 @@
 # Gaoang@i, 2015, 12, 21
 # Modified Mar 28, 2016
 
-# use Modern::Perl ; 
+# use Modern::Perl ;
+use lib '.';
 use v5.16; 
 use SetMethods qw(:Both);
 use FileProcess qw(update_trans);
