@@ -1,0 +1,7 @@
+
+
+# This function extract a sub LTS that starts from s in quo.aut
+# 
+def extract_from_state(s, quo)
+
+end
