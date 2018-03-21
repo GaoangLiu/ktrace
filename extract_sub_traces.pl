@@ -1,12 +1,14 @@
-use Modern::Perl ;
-use DDP  ;
+use v5.10;
+# use DDP  ;
 use FileProcess qw(update_trans) ;
+use warnings;
 # Given a certain trace that is extracted from QUOTIENT LTS, and 
 # extract its corresponding paths from the ORIGINAL LTS
 # Gaoang @ April 24 / 16 
 
 END {
-    my $trans = update_trans(IO::File->new("tmp/hsy_stack.aut", 'r')) ;
+    my $file = $ARGV[0] || 'input/msqueue23.aut';
+    my $trans = update_trans(IO::File->new($file, 'r')) ;
 
     my @todos = map { qr($_) } (
 	"CALL \!POP \!1", "CALL \!PUSH \!11 \!2", "RET \!PUSH \!2", "CALL \!PUSH \!12 \!2", 
