@@ -8,11 +8,17 @@ use FileProcess qw(original_trace flush_trans);
 use List::Util qw(max first);
 use Carp qw(croak carp);
 no warnings 'experimental::smartmatch';
+use DDP;
 
 END {
     if (defined $ARGV[2] and $ARGV[1] =~ /^\d+$/ and $ARGV[2] =~ /^\d+$/) {
-	#if(1) {
 	inequivalent_traces($ARGV[1], $ARGV[2]);
+	k_trace_equiv($ARGV[1], $ARGV[2], 2);
+	say "For state 2321: ";
+	p prefix_k_trace($ARGV[1], 1, 2);
+	say "For state 222: ";
+	p prefix_k_trace($ARGV[2], 1, 2); 
+	#p prefix_k_trace($ARGV[2], 1);
     } else {
 	check_traces_equivalence();
     }
@@ -24,7 +30,7 @@ my ($file, $fh, $wh, $con);
 {
     die ">> Please specify a quotient file\n\n" 
 	unless defined $ARGV[0]; 
-
+    
     $file = $ARGV[0];
     $fh = IO::File->new($file, "r"); # Reading quotient file 
 
@@ -266,13 +272,13 @@ sub inequivalent_traces {
       } else {		# Find an  
 	  say "Find an inequivalent trace with length: $depth \nThe trace is: ";
 	  delete @{$ta}{ keys %$tb };
-	  
+
 	  for (keys %$ta) {
 	      say "\t ($sa) $_ (..) \n";
 	      my %all_traces = original_trace($sa, $_, \%trans);
 	      say "The sub-LTS that leads to this trace is : "; 
 	      flush_trans(\%all_traces);
-
+	      
 	      say "\nThe path (with tau transition) is: ";
 	      print_counterexample($sa, \%all_traces);
 	      last L;		# break out WHILE loop

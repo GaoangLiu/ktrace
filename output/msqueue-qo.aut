@@ -1,6 +1,3 @@
 States: 6765
 Tau trans: 3946
 Transitions: 16322
-      2321       222        1-trace equivalent
-      2369       270        1-trace equivalent
-	(1, 2, 3, 4)_equiv = (2, 0, 0, 0)
